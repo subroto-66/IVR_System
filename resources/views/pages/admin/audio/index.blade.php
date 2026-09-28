@@ -6,11 +6,39 @@
         modalTitle: '',
         modalTargetType: '',
         modalOptionId: null,
+        selectedFileName: '',
+        selectedFileSize: '',
+        selectedFileAudioUrl: null,
+        isDragging: false,
+        isUploading: false,
         openUploadModal(title, targetType, optionId = null) {
             this.modalTitle = title;
             this.modalTargetType = targetType;
             this.modalOptionId = optionId;
+            this.resetFile();
+            this.isUploading = false;
             this.uploadModalOpen = true;
+        },
+        handleFileSelect(event) {
+            const file = event.target?.files?.[0];
+            if (!file) return;
+            this.selectedFileName = file.name;
+            this.selectedFileSize = (file.size / 1024).toFixed(1) + ' KB';
+            if (this.selectedFileAudioUrl) {
+                URL.revokeObjectURL(this.selectedFileAudioUrl);
+            }
+            this.selectedFileAudioUrl = URL.createObjectURL(file);
+        },
+        resetFile() {
+            this.selectedFileName = '';
+            this.selectedFileSize = '';
+            if (this.selectedFileAudioUrl) {
+                URL.revokeObjectURL(this.selectedFileAudioUrl);
+                this.selectedFileAudioUrl = null;
+            }
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
         }
     }">
         <!-- Header -->
@@ -85,17 +113,24 @@
                             <div class="mt-4">
                                 @if ($slot['path'] && $slot['url'])
                                     <div class="space-y-2 p-3 rounded-xl bg-white border border-gray-200/70 dark:bg-gray-900 dark:border-gray-800 shadow-2xs">
-                                        <audio controls class="w-full h-8" preload="none">
-                                            <source src="{{ $slot['url'] }}">
+                                        <audio controls class="w-full h-8" preload="metadata">
+                                            <source src="{{ $slot['url'] }}" type="{{ $slot['meta']['mime'] ?? 'audio/mpeg' }}">
                                             Your browser does not support audio playback.
                                         </audio>
                                         <div class="flex items-center justify-between text-[11px] text-gray-500 font-mono">
-                                            <span class="truncate max-w-[200px]" title="{{ basename($slot['path']) }}">
+                                            <span class="truncate max-w-[180px]" title="{{ basename($slot['path']) }}">
                                                 {{ basename($slot['path']) }}
                                             </span>
-                                            @if ($slot['meta'])
-                                                <span>{{ number_format($slot['meta']['size'] / 1024, 1) }} KB</span>
-                                            @endif
+                                            <div class="flex items-center gap-2">
+                                                @if ($slot['meta'])
+                                                    <span>{{ number_format($slot['meta']['size'] / 1024, 1) }} KB</span>
+                                                @endif
+                                                <a href="{{ $slot['url'] }}" target="_blank" download title="Stream or download audio directly" class="text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                                                    <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 @else
@@ -208,17 +243,24 @@
                             <div class="mt-4">
                                 @if ($slot['path'] && $slot['url'])
                                     <div class="space-y-2 p-3 rounded-xl bg-white border border-gray-200/70 dark:bg-gray-900 dark:border-gray-800 shadow-2xs">
-                                        <audio controls class="w-full h-8" preload="none">
-                                            <source src="{{ $slot['url'] }}">
+                                        <audio controls class="w-full h-8" preload="metadata">
+                                            <source src="{{ $slot['url'] }}" type="{{ $slot['meta']['mime'] ?? 'audio/mpeg' }}">
                                             Your browser does not support audio playback.
                                         </audio>
                                         <div class="flex items-center justify-between text-[11px] text-gray-500 font-mono">
-                                            <span class="truncate max-w-[200px]" title="{{ basename($slot['path']) }}">
+                                            <span class="truncate max-w-[180px]" title="{{ basename($slot['path']) }}">
                                                 {{ basename($slot['path']) }}
                                             </span>
-                                            @if ($slot['meta'])
-                                                <span>{{ number_format($slot['meta']['size'] / 1024, 1) }} KB</span>
-                                            @endif
+                                            <div class="flex items-center gap-2">
+                                                @if ($slot['meta'])
+                                                    <span>{{ number_format($slot['meta']['size'] / 1024, 1) }} KB</span>
+                                                @endif
+                                                <a href="{{ $slot['url'] }}" target="_blank" download title="Stream or download audio directly" class="text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                                                    <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
                                 @else
@@ -265,19 +307,22 @@
         <!-- Audio Upload / Replace Modal -->
         <div x-show="uploadModalOpen" x-cloak
             class="fixed inset-0 z-99999 flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-xs"
-            @keydown.escape.window="uploadModalOpen = false">
+            @keydown.escape.window="if (!isUploading) { uploadModalOpen = false; resetFile(); }">
             <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900 dark:border dark:border-gray-800"
-                @click.away="uploadModalOpen = false">
+                @click.away="if (!isUploading) { uploadModalOpen = false; resetFile(); }">
                 <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800">
-                    <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="'Upload Audio: ' + modalTitle"></h3>
-                    <button type="button" @click="uploadModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="'Upload Audio: ' + modalTitle"></h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Select and preview audio before saving.</p>
+                    </div>
+                    <button type="button" @click="uploadModalOpen = false; resetFile();" :disabled="isUploading" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                         <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <form method="POST" action="{{ route('admin.ivr.audio.upload') }}" enctype="multipart/form-data" class="mt-4 space-y-4">
+                <form method="POST" action="{{ route('admin.ivr.audio.upload') }}" enctype="multipart/form-data" @submit="isUploading = true" class="mt-4 space-y-4">
                     @csrf
                     <input type="hidden" name="target_type" :value="modalTargetType">
                     <input type="hidden" name="option_id" :value="modalOptionId">
@@ -286,29 +331,81 @@
                         <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
                             Audio File (MP3, WAV, M4A &bull; Max 20MB)
                         </label>
-                        <div class="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50/50 hover:bg-gray-50 hover:border-brand-400 transition cursor-pointer dark:border-gray-700 dark:bg-gray-800/30">
-                            <svg class="size-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                            <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                                Click to select an audio file
-                            </p>
-                            <p class="text-xs text-gray-400 mt-1">
-                                Callers immediately hear the new file on their next dial.
-                            </p>
-                            <input type="file" name="audio_file" required accept=".mp3,.wav,.m4a,audio/*"
+                        
+                        <!-- File Upload Dropzone -->
+                        <div class="relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl transition cursor-pointer"
+                            :class="selectedFileName 
+                                ? 'border-emerald-500 bg-emerald-50/30 dark:border-emerald-500 dark:bg-emerald-950/20' 
+                                : (isDragging ? 'border-brand-500 bg-brand-50/40 dark:border-brand-500 dark:bg-brand-950/30' : 'border-gray-300 bg-gray-50/50 hover:bg-gray-50 hover:border-brand-400 dark:border-gray-700 dark:bg-gray-800/30')"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="isDragging = false; if ($event.dataTransfer?.files?.length) { $refs.fileInput.files = $event.dataTransfer.files; handleFileSelect({ target: $refs.fileInput }); }">
+
+                            <!-- When no file is selected yet -->
+                            <template x-if="!selectedFileName">
+                                <div class="text-center">
+                                    <svg class="size-10 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                        Click to select or drag & drop an audio file
+                                    </p>
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        MP3, WAV, M4A up to 20MB
+                                    </p>
+                                </div>
+                            </template>
+
+                            <!-- When file has been selected -->
+                            <template x-if="selectedFileName">
+                                <div class="w-full text-center space-y-2">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100/70 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold">
+                                        <svg class="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span class="truncate max-w-[240px]" x-text="selectedFileName"></span>
+                                        <span class="text-emerald-600 dark:text-emerald-400 font-mono text-[11px]" x-text="'(' + selectedFileSize + ')'"></span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                        File selected! Ready to upload.
+                                    </p>
+                                </div>
+                            </template>
+
+                            <input type="file" name="audio_file" x-ref="fileInput" required accept=".mp3,.wav,.m4a,audio/*"
+                                @change="handleFileSelect($event)"
                                 class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                        </div>
+
+                        <!-- Instant Audio Preview in Modal -->
+                        <div x-show="selectedFileAudioUrl" class="mt-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-gray-800/60 dark:border-gray-700 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                                    <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    Preview Audio Before Upload:
+                                </span>
+                                <button type="button" @click.prevent="resetFile()" class="text-rose-600 hover:text-rose-700 text-xs font-medium">
+                                    Remove / Change
+                                </button>
+                            </div>
+                            <audio :src="selectedFileAudioUrl" controls class="w-full h-8" preload="auto">
+                                Your browser does not support audio preview.
+                            </audio>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <button type="button" @click="uploadModalOpen = false"
+                        <button type="button" @click="uploadModalOpen = false; resetFile();" :disabled="isUploading"
                             class="px-4 py-2 text-xs font-semibold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition">
                             Cancel
                         </button>
-                        <button type="submit"
-                            class="px-5 py-2 text-xs font-semibold text-white bg-brand-500 rounded-xl hover:bg-brand-600 transition shadow-xs">
-                            Upload Recording
+                        <button type="submit" :disabled="isUploading || !selectedFileName"
+                            class="inline-flex items-center gap-2 px-5 py-2 text-xs font-semibold text-white bg-brand-500 rounded-xl hover:bg-brand-600 transition shadow-xs disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg x-show="isUploading" class="size-3.5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="isUploading ? 'Uploading Recording...' : 'Upload Recording'"></span>
                         </button>
                     </div>
                 </form>

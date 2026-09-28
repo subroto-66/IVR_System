@@ -31,6 +31,19 @@ Route::prefix('twilio')->middleware(['twilio.validate'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| IVR Audio Streaming (Public / Phone & Browser Playback)
+|--------------------------------------------------------------------------
+| Streams audio files directly with HTTP 206 Partial Content / Range support
+| ensuring uninterrupted playback in modern browsers and Twilio voice calls.
+|
+*/
+Route::get('/ivr/audio/stream/{filename}', [AudioManagementController::class, 'stream'])
+    ->where('filename', '.*')
+    ->name('ivr.audio.stream');
+
+
+/*
+|--------------------------------------------------------------------------
 | Admin Authentication
 |--------------------------------------------------------------------------
 */

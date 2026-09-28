@@ -176,29 +176,52 @@ class AudioStorageService
     /**
      * Get the public URL for a stored audio path.
      */
-    public function getUrl(string $path): string
+    public function getUrl(?string $path): string
     {
+        if (empty($path)) {
+            return '';
+        }
+
         // If path is already an absolute HTTP/HTTPS URL
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
         }
 
-        $cleanPath = ltrim($path, '/');
+        $cleanPath = ltrim(str_replace('\\', '/', $path), '/');
 
-        // Generate URL using the configured public disk (storage/app/public)
-        try {
-            return Storage::disk($disk)->url($path);
-        } catch (Exception) {
-            // Fallback: serve directly if the file is in the public folder
-            return asset($cleanPath);
+        $disk = $this->getDiskName();
+        if ($disk === 's3' || $disk === 'r2') {
+            try {
+                return Storage::disk($disk)->url($cleanPath);
+            } catch (\Throwable) {
+                // fall through
+            }
         }
 
+        // Use the dedicated stream route with HTTP Range (206) support,
+        // dynamically resolved against the current incoming request host
         try {
-            return Storage::disk($disk)->url($path);
-        } catch (Exception) {
-            // Fallback for public storage
+            return route('ivr.audio.stream', ['filename' => $cleanPath]);
+        } catch (\Throwable) {
             return asset('storage/' . $cleanPath);
         }
+    }
+
+    /**
+     * Determine MIME type from file extension.
+     */
+    public function getMimeType(string $path): string
+    {
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        return match ($extension) {
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'm4a' => 'audio/mp4',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+            'flac' => 'audio/flac',
+            default => 'audio/mpeg',
+        };
     }
 
     /**
@@ -210,10 +233,11 @@ class AudioStorageService
             return null;
         }
 
-        $cleanPath = ltrim($path, '/');
-        $publicFilePath = public_path($cleanPath);
+        $cleanPath = ltrim(str_replace('\\', '/', $path), '/');
+        $mime = $this->getMimeType($cleanPath);
 
         // Check direct public path
+        $publicFilePath = public_path($cleanPath);
         if (file_exists($publicFilePath) && is_file($publicFilePath)) {
             return [
                 'exists' => true,
@@ -221,22 +245,37 @@ class AudioStorageService
                 'last_modified' => filemtime($publicFilePath),
                 'url' => $this->getUrl($path),
                 'filename' => basename($path),
+                'mime' => $mime,
+            ];
+        }
+
+        // Check public storage directory
+        $storagePublicPath = storage_path('app/public/' . $cleanPath);
+        if (file_exists($storagePublicPath) && is_file($storagePublicPath)) {
+            return [
+                'exists' => true,
+                'size' => filesize($storagePublicPath),
+                'last_modified' => filemtime($storagePublicPath),
+                'url' => $this->getUrl($path),
+                'filename' => basename($path),
+                'mime' => $mime,
             ];
         }
 
         $disk = $this->getDiskName();
 
         try {
-            if (Storage::disk($disk)->exists($path)) {
+            if (Storage::disk($disk)->exists($cleanPath)) {
                 return [
                     'exists' => true,
-                    'size' => Storage::disk($disk)->size($path),
-                    'last_modified' => Storage::disk($disk)->lastModified($path),
+                    'size' => Storage::disk($disk)->size($cleanPath),
+                    'last_modified' => Storage::disk($disk)->lastModified($cleanPath),
                     'url' => $this->getUrl($path),
                     'filename' => basename($path),
+                    'mime' => $mime,
                 ];
             }
-        } catch (Exception) {
+        } catch (\Throwable) {
             // Fall through
         }
 

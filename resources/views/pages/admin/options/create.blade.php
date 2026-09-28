@@ -4,8 +4,33 @@
     <div class="max-w-4xl space-y-6" x-data="{
         digit: '{{ old('digit', '') }}',
         actionType: '{{ old('action_type', 'audio') }}',
+        selectedFileName: '',
+        selectedFileSize: '',
+        selectedFileAudioUrl: null,
+        isDragging: false,
         selectDigit(val) {
             this.digit = val;
+        },
+        handleFileSelect(event) {
+            const file = event.target?.files?.[0];
+            if (!file) return;
+            this.selectedFileName = file.name;
+            this.selectedFileSize = (file.size / 1024).toFixed(1) + ' KB';
+            if (this.selectedFileAudioUrl) {
+                URL.revokeObjectURL(this.selectedFileAudioUrl);
+            }
+            this.selectedFileAudioUrl = URL.createObjectURL(file);
+        },
+        resetFile() {
+            this.selectedFileName = '';
+            this.selectedFileSize = '';
+            if (this.selectedFileAudioUrl) {
+                URL.revokeObjectURL(this.selectedFileAudioUrl);
+                this.selectedFileAudioUrl = null;
+            }
+            if (this.$refs.fileInput) {
+                this.$refs.fileInput.value = '';
+            }
         }
     }">
         <!-- Header -->
@@ -208,18 +233,62 @@
                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
                         Upload Recording (MP3 / WAV / M4A &bull; Max 20MB)
                     </label>
-                    <div class="relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50/50 hover:bg-gray-50 hover:border-brand-400 transition cursor-pointer dark:border-gray-700 dark:bg-gray-800/30">
-                        <svg class="size-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
-                            Select an audio file from your device
-                        </p>
-                        <p class="text-xs text-gray-400 mt-1">
-                            Audio files are automatically saved and served with 0 external dependencies.
-                        </p>
-                        <input type="file" name="audio_file" accept=".mp3,.wav,.m4a,audio/*"
+                    <div class="relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl transition cursor-pointer"
+                        :class="selectedFileName 
+                            ? 'border-emerald-500 bg-emerald-50/30 dark:border-emerald-500 dark:bg-emerald-950/20' 
+                            : (isDragging ? 'border-brand-500 bg-brand-50/40 dark:border-brand-500 dark:bg-brand-950/30' : 'border-gray-300 bg-gray-50/50 hover:bg-gray-50 hover:border-brand-400 dark:border-gray-700 dark:bg-gray-800/30')"
+                        @dragover.prevent="isDragging = true"
+                        @dragleave.prevent="isDragging = false"
+                        @drop.prevent="isDragging = false; if ($event.dataTransfer?.files?.length) { $refs.fileInput.files = $event.dataTransfer.files; handleFileSelect({ target: $refs.fileInput }); }">
+
+                        <template x-if="!selectedFileName">
+                            <div class="text-center">
+                                <svg class="size-10 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Select an audio file from your device
+                                </p>
+                                <p class="text-xs text-gray-400 mt-1">
+                                    Supported: MP3, WAV, M4A &bull; Max 20MB &bull; Live audio presentation
+                                </p>
+                            </div>
+                        </template>
+
+                        <template x-if="selectedFileName">
+                            <div class="w-full text-center space-y-2">
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100/70 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs font-semibold">
+                                    <svg class="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <span class="truncate max-w-[240px]" x-text="selectedFileName"></span>
+                                    <span class="text-emerald-600 dark:text-emerald-400 font-mono text-[11px]" x-text="'(' + selectedFileSize + ')'"></span>
+                                </div>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                    File selected! Will be uploaded upon saving this option.
+                                </p>
+                            </div>
+                        </template>
+
+                        <input type="file" name="audio_file" x-ref="fileInput" accept=".mp3,.wav,.m4a,audio/*"
+                            @change="handleFileSelect($event)"
                             class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                    </div>
+
+                    <!-- Instant Audio Preview in Create View -->
+                    <div x-show="selectedFileAudioUrl" class="mt-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-gray-800/60 dark:border-gray-700 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                                <span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Preview Selected File:
+                            </span>
+                            <button type="button" @click.prevent="resetFile()" class="text-rose-600 hover:text-rose-700 text-xs font-medium">
+                                Remove / Reset
+                            </button>
+                        </div>
+                        <audio :src="selectedFileAudioUrl" controls class="w-full h-8" preload="auto">
+                            Your browser does not support audio preview.
+                        </audio>
                     </div>
                 </div>
 

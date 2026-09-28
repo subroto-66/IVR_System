@@ -147,8 +147,8 @@
                                                 Prerecorded Audio
                                             </span>
                                             @if ($opt->resolved_audio_url)
-                                                <audio controls class="h-7 w-28 scale-90" preload="none">
-                                                    <source src="{{ $opt->resolved_audio_url }}">
+                                                <audio controls class="h-7 w-28 scale-90" preload="metadata">
+                                                    <source src="{{ $opt->resolved_audio_url }}" type="audio/mpeg">
                                                 </audio>
                                             @endif
                                         </div>

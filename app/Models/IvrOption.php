@@ -62,12 +62,12 @@ class IvrOption extends Model
      */
     public function getResolvedAudioUrlAttribute(): ?string
     {
-        if (!empty($this->audio_url)) {
-            return $this->audio_url;
-        }
-
         if (!empty($this->audio_path)) {
             return app(AudioStorageService::class)->getUrl($this->audio_path);
+        }
+
+        if (!empty($this->audio_url)) {
+            return $this->audio_url;
         }
 
         return null;

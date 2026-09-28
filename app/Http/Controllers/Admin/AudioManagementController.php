@@ -204,4 +204,55 @@ class AudioManagementController extends Controller
             return back()->with('error', 'Error removing audio: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Stream an audio file directly with HTTP Range (206 Partial Content) support.
+     */
+    public function stream(string $filename)
+    {
+        $cleanPath = ltrim(str_replace('\\', '/', $filename), '/');
+
+        // Prevent directory traversal
+        if (str_contains($cleanPath, '..') || str_contains($cleanPath, "\0")) {
+            abort(403, 'Invalid audio file request.');
+        }
+
+        // Possible storage locations
+        $candidates = [
+            storage_path('app/public/' . $cleanPath),
+            public_path('storage/' . $cleanPath),
+            public_path($cleanPath),
+            storage_path('app/' . $cleanPath),
+        ];
+
+        $filePath = null;
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                $filePath = $candidate;
+                break;
+            }
+        }
+
+        if (!$filePath) {
+            abort(404, 'Audio file not found on server.');
+        }
+
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeMap = [
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'm4a' => 'audio/mp4',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+            'flac' => 'audio/flac',
+        ];
+        $mimeType = $mimeMap[$extension] ?? (mime_content_type($filePath) ?: 'audio/mpeg');
+
+        return response()->file($filePath, [
+            'Content-Type' => $mimeType,
+            'Accept-Ranges' => 'bytes',
+            'Cache-Control' => 'public, max-age=86400, must-revalidate',
+        ]);
+    }
 }
+
