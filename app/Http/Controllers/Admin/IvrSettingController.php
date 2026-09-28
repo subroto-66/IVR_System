@@ -34,6 +34,13 @@ class IvrSettingController extends Controller
             'invalid_fallback_text' => IvrSetting::get('invalid_fallback_text', 'Sorry, that is not a valid selection. Please try again.'),
             'no_input_fallback_text' => IvrSetting::get('no_input_fallback_text', 'We did not receive a selection. Please choose an option.'),
             'goodbye_fallback_text' => IvrSetting::get('goodbye_fallback_text', 'Thank you for calling. Goodbye.'),
+
+            // Twilio & Environment Credentials (Database stored with .env fallback)
+            'twilio_account_sid' => IvrSetting::get('twilio_account_sid') ?: (config('twilio.account_sid') ?: env('TWILIO_ACCOUNT_SID', '')),
+            'twilio_auth_token' => IvrSetting::get('twilio_auth_token') ?: (config('twilio.auth_token') ?: env('TWILIO_AUTH_TOKEN', '')),
+            'twilio_phone_number' => IvrSetting::get('twilio_phone_number') ?: (config('twilio.phone_number') ?: env('TWILIO_PHONE_NUMBER', '')),
+            'twilio_webhook_validation' => filter_var(IvrSetting::get('twilio_webhook_validation', config('twilio.webhook_validation', true)), FILTER_VALIDATE_BOOLEAN),
+            'app_url' => IvrSetting::get('app_url') ?: (config('app.url') ?: env('APP_URL', 'http://localhost:8000')),
         ];
 
         return view('pages.admin.settings.index', [
@@ -43,7 +50,7 @@ class IvrSettingController extends Controller
     }
 
     /**
-     * Update IVR system settings.
+     * Update IVR system settings and environment credentials.
      */
     public function update(Request $request): RedirectResponse
     {
@@ -61,19 +68,75 @@ class IvrSettingController extends Controller
             'invalid_fallback_text' => ['nullable', 'string', 'max:500'],
             'no_input_fallback_text' => ['nullable', 'string', 'max:500'],
             'goodbye_fallback_text' => ['nullable', 'string', 'max:500'],
+
+            // Environment & Twilio Credentials
+            'twilio_account_sid' => ['nullable', 'string', 'max:100'],
+            'twilio_auth_token' => ['nullable', 'string', 'max:100'],
+            'twilio_phone_number' => ['nullable', 'string', 'max:50'],
+            'twilio_webhook_validation' => ['nullable', 'boolean'],
+            'app_url' => ['nullable', 'url', 'max:255'],
         ]);
 
-        foreach ($validated as $key => $value) {
-            IvrSetting::set($key, $value);
+        // 1. Update Standard IVR Settings
+        $ivrSettingKeys = [
+            'max_retries',
+            'gather_timeout',
+            'return_to_menu_digit',
+            'return_to_menu_prompt_text',
+            'sms_message',
+            'sms_confirmation_fallback_text',
+            'welcome_fallback_text',
+            'main_presentation_fallback_text',
+            'menu_fallback_text',
+            'invalid_fallback_text',
+            'no_input_fallback_text',
+            'goodbye_fallback_text',
+        ];
+
+        foreach ($ivrSettingKeys as $key) {
+            if (array_key_exists($key, $validated)) {
+                IvrSetting::set($key, $validated[$key]);
+            }
         }
 
         // Handle checkbox for boolean sms_enabled if not checked
         if (!$request->has('sms_enabled')) {
             IvrSetting::set('sms_enabled', '0');
+        } else {
+            IvrSetting::set('sms_enabled', '1');
+        }
+
+        // 2. Handle Twilio & Environment Credentials (stored safely in database to prevent dev-server process termination)
+        if ($request->has('twilio_account_sid')) {
+            $sid = trim((string) $request->input('twilio_account_sid'));
+            IvrSetting::set('twilio_account_sid', $sid, ['group' => 'twilio', 'label' => 'Twilio Account SID']);
+            config(['twilio.account_sid' => $sid]);
+        }
+
+        if ($request->filled('twilio_auth_token')) {
+            $token = trim((string) $request->input('twilio_auth_token'));
+            IvrSetting::set('twilio_auth_token', $token, ['group' => 'twilio', 'label' => 'Twilio Auth Token']);
+            config(['twilio.auth_token' => $token]);
+        }
+
+        if ($request->has('twilio_phone_number')) {
+            $phone = trim((string) $request->input('twilio_phone_number'));
+            IvrSetting::set('twilio_phone_number', $phone, ['group' => 'twilio', 'label' => 'Twilio Phone Number']);
+            config(['twilio.phone_number' => $phone]);
+        }
+
+        $webhookVal = $request->boolean('twilio_webhook_validation');
+        IvrSetting::set('twilio_webhook_validation', $webhookVal ? '1' : '0', ['group' => 'twilio', 'label' => 'Twilio Webhook Validation']);
+        config(['twilio.webhook_validation' => $webhookVal]);
+
+        if ($request->filled('app_url')) {
+            $appUrl = rtrim(trim((string) $request->input('app_url')), '/');
+            IvrSetting::set('app_url', $appUrl, ['group' => 'general', 'label' => 'Application URL']);
+            config(['app.url' => $appUrl]);
         }
 
         IvrSetting::clearCache();
 
-        return back()->with('success', 'IVR settings updated successfully.');
+        return back()->with('success', 'IVR system settings and credentials updated successfully.');
     }
 }

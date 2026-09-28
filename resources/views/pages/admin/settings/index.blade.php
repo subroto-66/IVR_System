@@ -9,7 +9,7 @@
                     IVR System Configuration & Settings
                 </h1>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Configure call limits, timeouts, keypad digits, SMS dispatching, and text-to-speech fallback prompts.
+                    Configure environment credentials, call limits, keypad timeouts, SMS dispatching, and text-to-speech fallback prompts.
                 </p>
             </div>
             <div class="flex items-center gap-2">
@@ -48,7 +48,90 @@
             @csrf
             @method('PUT')
 
-            <!-- Section 1: Telephony Controls & Limits -->
+            <!-- Section 1: Twilio API & Environment Credentials -->
+            <div x-data="{ showAuthToken: false }" class="rounded-2xl border border-brand-200/80 bg-brand-50/20 p-6 dark:border-brand-900/40 dark:bg-brand-950/10 shadow-xs">
+                <div class="border-b border-brand-100 dark:border-brand-900/30 pb-4 mb-6">
+                    <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-brand-500"></span>
+                        <h2 class="text-base font-bold text-gray-900 dark:text-white">Twilio API & Telephony Credentials</h2>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Manage your Twilio account API keys, telephone number, and application URL settings directly from this dashboard.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Twilio Account SID -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-1.5">
+                            Twilio Account SID (TWILIO_ACCOUNT_SID)
+                        </label>
+                        <input type="text" id="twilio_account_sid" name="twilio_account_sid" value="{{ old('twilio_account_sid', $settings['twilio_account_sid']) }}" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            class="w-full font-mono rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white transition" />
+                        <span class="text-[11px] text-gray-400 mt-1 block">Found in Twilio Console Dashboard under "Account Info".</span>
+                    </div>
+
+                    <!-- Twilio Auth Token -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                                Twilio Auth Token (TWILIO_AUTH_TOKEN)
+                            </label>
+                            <button type="button" @click="showAuthToken = !showAuthToken" class="text-[11px] font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                                <span x-text="showAuthToken ? 'Hide Secret' : 'Show Secret'"></span>
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <input :type="showAuthToken ? 'text' : 'password'" id="twilio_auth_token" name="twilio_auth_token" value="{{ old('twilio_auth_token', $settings['twilio_auth_token']) }}" placeholder="Enter Twilio Auth Token"
+                                class="w-full font-mono rounded-xl border border-gray-300 bg-white px-4 py-2.5 pe-10 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white transition" />
+                            <button type="button" @click="showAuthToken = !showAuthToken" class="absolute top-1/2 end-3 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                <svg x-show="!showAuthToken" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                <svg x-show="showAuthToken" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                                </svg>
+                            </button>
+                        </div>
+                        <span class="text-[11px] text-gray-400 mt-1 block">Your primary account authorization secret.</span>
+                    </div>
+
+                    <!-- Twilio Phone Number -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-1.5">
+                            Twilio Phone Number (TWILIO_PHONE_NUMBER)
+                        </label>
+                        <input type="text" id="twilio_phone_number" name="twilio_phone_number" value="{{ old('twilio_phone_number', $settings['twilio_phone_number']) }}" placeholder="+18325512407"
+                            class="w-full font-mono rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white transition" />
+                        <span class="text-[11px] text-gray-400 mt-1 block">Twilio assigned phone number in E.164 format (e.g. +1234567890).</span>
+                    </div>
+
+                    <!-- Application Public Base URL -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-1.5">
+                            Application Base URL (APP_URL)
+                        </label>
+                        <input type="url" name="app_url" value="{{ old('app_url', $settings['app_url']) }}" placeholder="http://localhost:8000"
+                            class="w-full font-mono rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white transition" />
+                        <span class="text-[11px] text-gray-400 mt-1 block">Used by Twilio webhook URLs and public audio streaming.</span>
+                    </div>
+                </div>
+
+                <!-- Webhook Security Toggle -->
+                <div class="mt-5 pt-4 border-t border-brand-100/70 dark:border-brand-900/30 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-gray-900 dark:text-white block">Twilio Webhook Signature Validation</span>
+                        <span class="text-[11px] text-gray-400 block mt-0.5">Enforces X-Twilio-Signature verification to ensure all incoming calls originate from Twilio.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" name="twilio_webhook_validation" value="1" {{ $settings['twilio_webhook_validation'] ? 'checked' : '' }} class="sr-only peer" />
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-brand-500"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Section 2: Telephony Controls & Limits -->
             <div class="rounded-2xl border border-gray-200/80 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 shadow-xs">
                 <div class="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
                     <div class="flex items-center gap-2">
@@ -99,7 +182,7 @@
                 </div>
             </div>
 
-            <!-- Section 2: Twilio SMS Integration -->
+            <!-- Section 3: Twilio SMS Integration -->
             <div class="rounded-2xl border border-purple-200/80 bg-purple-50/20 p-6 dark:border-purple-900/40 dark:bg-purple-950/10 shadow-xs">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-purple-100 dark:border-purple-900/30 pb-4 mb-6">
                     <div>
@@ -138,7 +221,7 @@
                 </div>
             </div>
 
-            <!-- Section 3: Speech Fallback Prompts (Amazon Polly Joanna) -->
+            <!-- Section 4: Speech Fallback Prompts (Amazon Polly Joanna) -->
             <div class="rounded-2xl border border-gray-200/80 bg-white p-6 dark:border-gray-800 dark:bg-gray-900 shadow-xs">
                 <div class="border-b border-gray-100 dark:border-gray-800 pb-4 mb-6">
                     <div class="flex items-center justify-between">
@@ -216,7 +299,7 @@
                     <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Save System Settings
+                    Save System Settings & Credentials
                 </button>
             </div>
         </form>

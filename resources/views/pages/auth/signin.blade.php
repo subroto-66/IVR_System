@@ -7,7 +7,7 @@
             <div class="flex w-full flex-1 flex-col lg:w-1/2">
                 <div class="mx-auto w-full max-w-md pt-10">
                     <span class="inline-flex items-center gap-2 text-sm font-semibold tracking-wide uppercase text-brand-500">
-                        24/7 Twilio IVR Information & Recruitment System
+                        24/7 Call Answering IVR System
                     </span>
                 </div>
                 <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
@@ -103,12 +103,6 @@
                                 </div>
                             </div>
                         </form>
-
-                        <div class="mt-6 p-4 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-600 dark:bg-gray-800/40 dark:border-gray-700 dark:text-gray-400">
-                            <p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Default Seeded Admin Credentials:</p>
-                            <p>Email: <span class="font-mono text-brand-600 dark:text-brand-400">admin@example.com</span></p>
-                            <p>Password: <span class="font-mono text-brand-600 dark:text-brand-400">password</span></p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -123,9 +117,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                             </svg>
                         </div>
-                        <h2 class="text-xl font-bold text-white mb-2">24/7 Inbound Telephony</h2>
+                        <h2 class="text-xl font-bold text-white mb-2">24/7 Call Answering IVR System</h2>
                         <p class="text-sm text-gray-400 leading-relaxed">
-                            Replace prerecorded audio presentations dynamically without developer intervention. Fully driven by Twilio Voice, TwiML, and Laravel.
+                            Stay connected around the clock with reliable inbound call handling, ensuring every customer call is answered promptly—day or night.
                         </p>
                     </div>
                 </div>

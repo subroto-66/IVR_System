@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
+    $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
     $this->seed(\Database\Seeders\IvrSystemSeeder::class);
     $this->admin = User::where('email', 'admin@example.com')->first();
     Storage::fake('public');
